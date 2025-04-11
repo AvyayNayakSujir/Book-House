@@ -1,5 +1,3 @@
-## Installation
-
 ### Prerequisites
 - Node.js (v14.0+)
 - npm or yarn
