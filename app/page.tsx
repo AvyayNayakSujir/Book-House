@@ -262,7 +262,7 @@ export default function Home() {
                 className="h-8 w-8 text-blue-600 dark:text-blue-400"
               />
               <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
-                Blockchain BookStore
+                Book House
               </h1>
             </div>
 
@@ -319,7 +319,7 @@ export default function Home() {
                 className="h-16 w-16 mx-auto text-blue-500 dark:text-blue-400 mb-4"
               />
               <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">
-                Welcome to the Blockchain BookStore
+                Welcome to Book House
               </h2>
               <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">
                 Connect your wallet to start exploring, purchasing, and managing
@@ -1270,8 +1270,7 @@ export default function Home() {
 
       <footer className="bg-white dark:bg-gray-800 py-6 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 dark:text-gray-400 text-sm">
-          Blockchain BookStore &copy; {new Date().getFullYear()} | Built with
-          Next.js and Ethereum
+          Book House &copy; {new Date().getFullYear()} | All rights reserved
         </div>
       </footer>
     </main>
