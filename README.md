@@ -29,7 +29,7 @@ This repository contains the implementation of a blockchain-based application de
 ### Setup
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/p-5.git
+git clone https://github.com/yourusername/Book-House.git
 
 # Navigate to the project directory
 cd p-5
