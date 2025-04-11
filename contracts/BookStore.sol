@@ -11,6 +11,8 @@ contract BookStore {
         string author;
         uint256 price;
         uint256 stock;
+        address owner;
+        address payable authorWallet;
     }
 
     struct UserPurchase {
@@ -39,7 +41,8 @@ contract BookStore {
         string memory _title,
         string memory _author,
         uint256 _price,
-        uint256 _stock
+        uint256 _stock,
+        address payable _authorWallet
     ) external onlyOwner {
         bookIdCounter++;
         books[bookIdCounter] = Book(
@@ -47,7 +50,9 @@ contract BookStore {
             _title,
             _author,
             _price,
-            _stock
+            _stock,
+            msg.sender,
+            _authorWallet
         );
         emit BookAdded(bookIdCounter);
     }
@@ -60,35 +65,61 @@ contract BookStore {
             msg.value >= books[_bookId].price * _quantity,
             "Insufficient funds"
         );
-
-        books[_bookId].stock -= _quantity;
+        require(
+            msg.sender != books[_bookId].owner,
+            "You cannot purchase your own book"
+        );
         
+        // Calculate the exact payment amount
+        uint256 paymentAmount = books[_bookId].price * _quantity;
+        
+        // Update book stock
+        books[_bookId].stock -= _quantity;
+
         // Record the purchase for this user
-        userPurchases[msg.sender].push(UserPurchase({
-            bookId: _bookId,
-            quantity: _quantity,
-            timestamp: block.timestamp
-        }));
+        userPurchases[msg.sender].push(
+            UserPurchase({
+                bookId: _bookId,
+                quantity: _quantity,
+                timestamp: block.timestamp
+            })
+        );
+
+        // Transfer payment to the author's wallet
+        books[_bookId].authorWallet.transfer(paymentAmount);
 
         emit BookPurchased(_bookId, _quantity, msg.sender);
 
-        if (msg.value > books[_bookId].price * _quantity) {
-            payable(msg.sender).transfer(
-                msg.value - books[_bookId].price * _quantity
-            );
+        // Refund excess payment if any
+        if (msg.value > paymentAmount) {
+            payable(msg.sender).transfer(msg.value - paymentAmount);
         }
     }
 
-    function getBook(
-        uint256 _bookId
-    )
+    function getBook(uint256 _bookId)
         external
         view
-        returns (uint256, string memory, string memory, uint256, uint256)
+        returns (
+            uint256,
+            string memory,
+            string memory,
+            uint256,
+            uint256,
+            address,
+            address
+        )
     {
         require(books[_bookId].id != 0, "Invalid book ID");
         Book memory book = books[_bookId];
-        return (book.id, book.title, book.author, book.price, book.stock);
+        return (
+            book.id,
+            book.title,
+            book.author,
+            book.price,
+            book.stock,
+            book.owner,
+            book.authorWallet
+        );
     }
 
     function getBookCount() public view returns (uint256) {
@@ -116,33 +147,37 @@ contract BookStore {
     }
 
     // Get detailed information about user's purchased books
-    function getUserBooks() external view returns (
-        uint256[] memory bookIds,
-        string[] memory titles,
-        string[] memory authors,
-        uint256[] memory quantities,
-        uint256[] memory timestamps
-    ) {
+    function getUserBooks()
+        external
+        view
+        returns (
+            uint256[] memory bookIds,
+            string[] memory titles,
+            string[] memory authors,
+            uint256[] memory quantities,
+            uint256[] memory timestamps
+        )
+    {
         UserPurchase[] memory purchases = userPurchases[msg.sender];
         uint256 purchaseCount = purchases.length;
-        
+
         bookIds = new uint256[](purchaseCount);
         titles = new string[](purchaseCount);
         authors = new string[](purchaseCount);
         quantities = new uint256[](purchaseCount);
         timestamps = new uint256[](purchaseCount);
-        
+
         for (uint256 i = 0; i < purchaseCount; i++) {
             UserPurchase memory purchase = purchases[i];
             Book memory book = books[purchase.bookId];
-            
+
             bookIds[i] = purchase.bookId;
             titles[i] = book.title;
             authors[i] = book.author;
             quantities[i] = purchase.quantity;
             timestamps[i] = purchase.timestamp;
         }
-        
+
         return (bookIds, titles, authors, quantities, timestamps);
     }
 }

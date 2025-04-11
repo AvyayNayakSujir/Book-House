@@ -3,365 +3,21 @@ import { useState, useEffect } from "react";
 import atm_abi from "../artifacts/contracts/BookStore.sol/BookStore.json";
 import { ethers } from "ethers";
 import contractConfig from "../contract-config.json";
-
-// Replace the icon imports with simple components since you had issues with lucide-react
-const IconComponent = ({
-  name,
-  className,
-}: {
-  name: string;
-  className?: string;
-}) => {
-  const icons = {
-    BookOpen: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"></path>
-        <path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"></path>
-      </svg>
-    ),
-    ShoppingCart: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="9" cy="21" r="1"></circle>
-        <circle cx="20" cy="21" r="1"></circle>
-        <path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"></path>
-      </svg>
-    ),
-    Plus: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <line x1="12" y1="5" x2="12" y2="19"></line>
-        <line x1="5" y1="12" x2="19" y2="12"></line>
-      </svg>
-    ),
-    Search: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <circle cx="11" cy="11" r="8"></circle>
-        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-      </svg>
-    ),
-    Wallet: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4"></path>
-        <path d="M3 5v14a2 2 0 0 0 2 2h16v-5"></path>
-        <path d="M18 12a2 2 0 0 0 0 4h4v-4Z"></path>
-      </svg>
-    ),
-    Loader2: () => (
-      <svg
-        className={`${className} animate-spin`}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 12a9 9 0 1 1-6.219-8.56"></path>
-      </svg>
-    ),
-    List: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <line x1="8" y1="6" x2="21" y2="6"></line>
-        <line x1="8" y1="12" x2="21" y2="12"></line>
-        <line x1="8" y1="18" x2="21" y2="18"></line>
-        <line x1="3" y1="6" x2="3.01" y2="6"></line>
-        <line x1="3" y1="12" x2="3.01" y2="12"></line>
-        <line x1="3" y1="18" x2="3.01" y2="18"></line>
-      </svg>
-    ),
-    RefreshCw: () => (
-      <svg
-        className={className}
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      >
-        <path d="M21 2v6h-6"></path>
-        <path d="M3 12a9 9 0 0 1 15-6.7l3 2.7"></path>
-        <path d="M3 22v-6h6"></path>
-        <path d="M21 12a9 9 0 0 1-15 6.7l-3-2.7"></path>
-      </svg>
-    ),
-  };
-
-  const Icon = icons[name as keyof typeof icons] || (() => <span>Icon</span>);
-  return <Icon />;
-};
+import Link from "next/link";
+import IconComponent from "../public/components/IconComponent";
+import {
+  useAllBooks,
+  usePurchase,
+  useAddBook,
+  useGetBook,
+} from "@/public/components/hooks";
+import Book from "@/public/components/IBook";
 
 declare global {
   interface Window {
     ethereum: any;
   }
 }
-
-// Book type definition
-interface Book {
-  id: number;
-  title: string;
-  author: string;
-  price: string;
-  stock: string;
-}
-
-// Hook to get all books
-const useAllBooks = (contract: any) => {
-  const [books, setBooks] = useState<Book[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  const fetchAllBooks = async () => {
-    if (!contract) return;
-
-    try {
-      setIsLoading(true);
-      // Assuming the contract keeps track of a bookCount or similar
-      const bookCount = await contract.getBookCount();
-      const bookCountNumber = bookCount.toNumber();
-
-      const fetchedBooks: Book[] = [];
-
-      // Fetch each book by ID
-      for (let i = 1; i <= bookCountNumber; i++) {
-        try {
-          const book = await contract.getBook(i);
-          fetchedBooks.push({
-            id: i,
-            title: book[1],
-            author: book[2],
-            price: ethers.utils.formatEther(book[3]),
-            stock: book[4].toString(),
-          });
-        } catch (error) {
-          console.error(`Error fetching book ID ${i}:`, error);
-          // Continue with the next book if one fails
-        }
-      }
-
-      setBooks(fetchedBooks);
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error("Error fetching all books:", error);
-      // If getBookCount fails, try alternative approach
-      fetchBooksWithoutCount();
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Alternative approach if getBookCount is not available
-  const fetchBooksWithoutCount = async () => {
-    if (!contract) return;
-
-    try {
-      setIsLoading(true);
-      const fetchedBooks: Book[] = [];
-
-      // Try fetching books until we get an error (assuming sequential IDs)
-      let i = 1;
-      let continueLoop = true;
-
-      while (continueLoop && i <= 100) {
-        // Limit to 100 to avoid infinite loop
-        try {
-          const book = await contract.getBook(i);
-          fetchedBooks.push({
-            id: i,
-            title: book[1],
-            author: book[2],
-            price: ethers.utils.formatEther(book[3]),
-            stock: book[4].toString(),
-          });
-          i++;
-        } catch (error) {
-          // Assuming error means we've reached the end of the books
-          continueLoop = false;
-        }
-      }
-
-      setBooks(fetchedBooks);
-      setLastUpdated(new Date());
-    } catch (error) {
-      console.error("Error fetching books:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Use the appropriate fetch method based on contract capabilities
-  const refreshBooks = async () => {
-    try {
-      // Try with bookCount first, fall back to alternative approach
-      if (contract && typeof contract.getBookCount === "function") {
-        await fetchAllBooks();
-      } else if (contract) {
-        await fetchBooksWithoutCount();
-      }
-    } catch (error) {
-      console.error("Failed to refresh books:", error);
-    }
-  };
-
-  // Effect to fetch books on contract change
-  useEffect(() => {
-    if (contract) {
-      refreshBooks();
-
-      // Set up polling for real-time updates (every 30 seconds)
-      const intervalId = setInterval(refreshBooks, 30000);
-
-      // Clean up on unmount
-      return () => clearInterval(intervalId);
-    }
-  }, [contract]);
-
-  return { books, isLoading, refreshBooks, lastUpdated };
-};
-
-// Purchase book hook
-const usePurchase = (contract: any) => {
-  const [isPurchasing, setIsPurchasing] = useState(false);
-
-  async function purchaseBook(bookId: any, quantity: any) {
-    try {
-      setIsPurchasing(true);
-      //@ts-ignore
-      await window.ethereum.enable();
-
-      const book = await contract.getBook(bookId);
-      const pricePerBook = book[3]; // price in wei
-      const totalPrice = pricePerBook.mul(quantity);
-
-      const transaction = await contract.purchaseBook(bookId, quantity, {
-        value: totalPrice,
-      });
-
-      const receipt = await transaction.wait();
-      console.log("Book purchased:", receipt);
-      setIsPurchasing(false);
-      return { success: true, message: "Book purchased successfully!" };
-    } catch (error) {
-      console.error("Error purchasing book:", error);
-      setIsPurchasing(false);
-      return { success: false, message: "Error purchasing book." };
-    }
-  }
-
-  return { purchaseBook, isPurchasing };
-};
-
-// Add book hook
-const useAddBook = (contract: any) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const addBook = async (title: any, author: any, price: any, stock: any) => {
-    try {
-      const priceAsNumber = parseFloat(price);
-      const stockAsNumber = parseInt(stock);
-
-      if (
-        !title ||
-        !author ||
-        isNaN(priceAsNumber) ||
-        isNaN(stockAsNumber) ||
-        priceAsNumber <= 0 ||
-        stockAsNumber <= 0
-      ) {
-        return { success: false, message: "Please enter valid book details." };
-      }
-
-      setIsLoading(true);
-      await contract.addBook(
-        title,
-        author,
-        ethers.utils.parseEther(price),
-        stock
-      );
-      setIsLoading(false);
-      return { success: true, message: "Book added successfully!" };
-    } catch (error) {
-      console.error("Error adding book:", error);
-      setIsLoading(false);
-      return { success: false, message: "Error adding book." };
-    }
-  };
-
-  return { addBook, isLoading };
-};
-
-// Get book hook
-const useGetBook = (contract: any) => {
-  const [isLoading, setIsLoading] = useState(false);
-
-  const getBook = async (bookId: any) => {
-    try {
-      setIsLoading(true);
-      const book = await contract.getBook(bookId);
-      setIsLoading(false);
-      return {
-        title: book[1],
-        author: book[2],
-        price: ethers.utils.formatEther(book[3]),
-        stock: book[4].toString(),
-      };
-    } catch (error) {
-      console.error("Error getting book:", error);
-      setIsLoading(false);
-      return null;
-    }
-  };
-
-  return { isLoading, getBook };
-};
 
 // Format wallet address helper
 const formatAddress = (address: string) => {
@@ -376,6 +32,16 @@ export default function Home() {
 
   const [contract, setContract] = useState<any>(null);
   const [walletAddress, setWalletAddress] = useState<string>("");
+
+  useEffect(() => {
+    if (walletAddress) {
+      setBookDataAdd((prev) => ({
+        ...prev,
+        authorWallet: walletAddress,
+      }));
+    }
+  }, [walletAddress]);
+
   const [isConnecting, setIsConnecting] = useState(false);
   const [notification, setNotification] = useState<{
     type: string;
@@ -394,6 +60,7 @@ export default function Home() {
     author: "",
     price: "",
     stock: "",
+    authorWallet: "",
   });
   const [bookDataGet, setBookDataGet] = useState({
     title: "",
@@ -425,7 +92,7 @@ export default function Home() {
       if (!contractAddress) {
         throw new Error("Contract address is not defined");
       }
-      
+
       setIsConnecting(true);
       //@ts-ignore
       await window.ethereum.enable();
@@ -456,6 +123,16 @@ export default function Home() {
   // Book handlers
   const handlePurchase = async () => {
     if (bookIdPurchase > 0 && quantity > 0) {
+      const bookToPurchase = books.find((book) => book.id === bookIdPurchase);
+      console.log(bookToPurchase);
+      // Check if the user is trying to buy their own book
+      if (
+        bookToPurchase &&
+        bookToPurchase.author.toLowerCase() === walletAddress.toLowerCase()
+      ) {
+        showNotification("error", "You cannot purchase your own book");
+        return;
+      }
       const result = await purchaseBook(bookIdPurchase, quantity);
       showNotification(result.success ? "success" : "error", result.message);
       if (result.success) {
@@ -471,7 +148,8 @@ export default function Home() {
       bookDataAdd.title,
       bookDataAdd.author,
       bookDataAdd.price,
-      bookDataAdd.stock
+      bookDataAdd.stock,
+      bookDataAdd.authorWallet
     );
     showNotification(result.success ? "success" : "error", result.message);
     if (result.success) {
@@ -480,6 +158,7 @@ export default function Home() {
         author: "",
         price: "",
         stock: "",
+        authorWallet: "",
       });
       refreshBooks(); // Refresh book list after adding
     }
@@ -549,14 +228,14 @@ export default function Home() {
   };
 
   return (
-    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-gray-800">
+    <main className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-slate-900 transition-colors duration-300">
       {/* Notification */}
       {notification && (
         <div
-          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg transition-all duration-500 ease-in-out ${
+          className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg backdrop-blur-sm transition-all duration-500 ease-in-out ${
             notification.type === "success"
-              ? "bg-green-600 text-white"
-              : "bg-red-600 text-white"
+              ? "bg-green-600/90 text-white dark:bg-green-600/80"
+              : "bg-red-600/90 text-white dark:bg-red-600/80"
           }`}
         >
           {notification.message}
@@ -564,83 +243,106 @@ export default function Home() {
       )}
 
       {/* Header */}
-      <header className="bg-white dark:bg-gray-800 shadow-md p-6">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div className="flex items-center space-x-2">
-            <IconComponent
-              name="BookOpen"
-              className="h-8 w-8 text-blue-600 dark:text-blue-400"
-            />
-            <h1 className="text-3xl font-bold text-gray-800 dark:text-white">
-              Blockchain BookStore
-            </h1>
-          </div>
-
-          {walletAddress ? (
-            <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full py-2 px-4">
+      <header className="bg-white dark:bg-gray-800 shadow-md border-b border-gray-200 dark:border-gray-700">
+        <div className="max-w-7xl mx-auto px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
+            <div className="flex items-center space-x-2">
               <IconComponent
-                name="Wallet"
-                className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400"
+                name="BookOpen"
+                className="h-8 w-8 text-blue-600 dark:text-blue-400"
               />
-              <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
-                {formatAddress(walletAddress)}
-              </span>
+              <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 dark:text-white">
+                Blockchain BookStore
+              </h1>
             </div>
-          ) : (
-            <button
-              onClick={connectToContract}
-              disabled={isConnecting}
-              className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition-colors duration-200"
-            >
-              {isConnecting ? (
-                <IconComponent name="Loader2" className="h-4 w-4" />
+
+            <div className="flex items-center gap-3">
+              <Link
+                href="/purchased-books"
+                className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 dark:bg-indigo-700 dark:hover:bg-indigo-600 text-white px-4 py-2 rounded-md transition-colors duration-200 shadow-sm"
+              >
+                <IconComponent name="BookOpen" className="h-4 w-4" />
+                <span>My Purchases</span>
+              </Link>
+
+              {walletAddress ? (
+                <div className="flex items-center bg-gray-100 dark:bg-gray-700 rounded-full py-2 px-4 shadow-inner">
+                  <IconComponent
+                    name="Wallet"
+                    className="h-4 w-4 mr-2 text-blue-600 dark:text-blue-400"
+                  />
+                  <span className="text-sm font-medium text-gray-800 dark:text-gray-200">
+                    {formatAddress(walletAddress)}
+                  </span>
+                </div>
               ) : (
-                <IconComponent name="Wallet" className="h-4 w-4" />
+                <button
+                  onClick={connectToContract}
+                  disabled={isConnecting}
+                  className="flex items-center space-x-2 bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors duration-200 shadow-sm"
+                >
+                  {isConnecting ? (
+                    <IconComponent
+                      name="Loader2"
+                      className="h-4 w-4 animate-spin"
+                    />
+                  ) : (
+                    <IconComponent name="Wallet" className="h-4 w-4" />
+                  )}
+                  <span>
+                    {isConnecting ? "Connecting..." : "Connect Wallet"}
+                  </span>
+                </button>
               )}
-              <span>{isConnecting ? "Connecting..." : "Connect Wallet"}</span>
-            </button>
-          )}
+            </div>
+          </div>
         </div>
       </header>
 
-      <div className="max-w-7xl mx-auto px-4 py-12">
+      <div className="max-w-7xl mx-auto px-4 py-8 sm:px-6 lg:px-8">
         {!contract && (
-          <div className="text-center py-20">
-            <IconComponent
-              name="BookOpen"
-              className="h-16 w-16 mx-auto text-blue-500 mb-4"
-            />
-            <h2 className="text-2xl font-semibold mb-2">
-              Welcome to the Blockchain BookStore
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-8 max-w-xl mx-auto">
-              Connect your wallet to start exploring, purchasing, and managing
-              books on the blockchain.
-            </p>
-            <button
-              onClick={connectToContract}
-              disabled={isConnecting}
-              className="flex items-center space-x-2 mx-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200"
-            >
-              {isConnecting ? (
-                <IconComponent name="Loader2" className="h-5 w-5" />
-              ) : (
-                <IconComponent name="Wallet" className="h-5 w-5" />
-              )}
-              <span>{isConnecting ? "Connecting..." : "Connect Wallet"}</span>
-            </button>
+          <div className="text-center py-20 relative overflow-hidden rounded-xl">
+            <div className="absolute inset-0 bg-gradient-to-r from-blue-500/10 to-purple-500/10 dark:from-blue-900/20 dark:to-purple-900/20 animate-gradient-x"></div>
+            <div className="relative z-10 px-4 py-16">
+              <IconComponent
+                name="BookOpen"
+                className="h-16 w-16 mx-auto text-blue-500 dark:text-blue-400 mb-4"
+              />
+              <h2 className="text-2xl font-bold mb-2 text-gray-800 dark:text-white">
+                Welcome to the Blockchain BookStore
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-8 max-w-xl mx-auto">
+                Connect your wallet to start exploring, purchasing, and managing
+                books on the blockchain.
+              </p>
+              <button
+                onClick={connectToContract}
+                disabled={isConnecting}
+                className="flex items-center space-x-2 mx-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg transition-colors duration-200 shadow-md"
+              >
+                {isConnecting ? (
+                  <IconComponent
+                    name="Loader2"
+                    className="h-5 w-5 animate-spin"
+                  />
+                ) : (
+                  <IconComponent name="Wallet" className="h-5 w-5" />
+                )}
+                <span>{isConnecting ? "Connecting..." : "Connect Wallet"}</span>
+              </button>
+            </div>
           </div>
         )}
 
         {contract && (
           <>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg gap-8 mb-16">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">
               {/* Purchase Book Card */}
               <div
                 id="purchase-section"
-                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl hover:scale-[1.01]"
+                className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700"
               >
-                <div className="bg-blue-600 p-4">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-700 dark:to-blue-800 p-4">
                   <h2 className="text-white text-xl font-semibold flex items-center">
                     <IconComponent
                       name="ShoppingCart"
@@ -668,6 +370,60 @@ export default function Home() {
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         min="0"
                       />
+
+                      {/* Selected book info */}
+                      {bookIdPurchase > 0 &&
+                        books.some((book) => book.id === bookIdPurchase) && (
+                          <div className="mt-2 p-2 bg-gray-50 dark:bg-gray-700/50 rounded-md border border-gray-200 dark:border-gray-600">
+                            {(() => {
+                              const selectedBook = books.find(
+                                (book) => book.id === bookIdPurchase
+                              );
+                              return selectedBook ? (
+                                <div className="text-sm text-gray-600 dark:text-gray-300">
+                                  <div className="font-medium text-gray-900 dark:text-white">
+                                    {selectedBook.title}
+                                  </div>
+                                  <div>by {selectedBook.author}</div>
+                                  <div className="mt-1 flex justify-between">
+                                    <span className="text-blue-600 dark:text-blue-400">
+                                      {selectedBook.price} ETH
+                                    </span>
+                                    <span
+                                      className={
+                                        parseInt(selectedBook.stock) > 5
+                                          ? "text-green-600 dark:text-green-400"
+                                          : parseInt(selectedBook.stock) > 0
+                                          ? "text-yellow-600 dark:text-yellow-400"
+                                          : "text-red-600 dark:text-red-400"
+                                      }
+                                    >
+                                      Stock: {selectedBook.stock}
+                                    </span>
+                                  </div>
+                                  <div className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                                    Payment will go directly to the author's
+                                    wallet
+                                  </div>
+                                </div>
+                              ) : null;
+                            })()}
+                          </div>
+                        )}
+
+                      {/* Warning message for own books */}
+                      {bookIdPurchase > 0 &&
+                        books.some(
+                          (book) =>
+                            book.id === bookIdPurchase &&
+                            book.owner &&
+                            book.owner.toLowerCase() ===
+                              walletAddress.toLowerCase()
+                        ) && (
+                          <div className="mt-2 text-red-500 dark:text-red-400 text-sm flex items-center">
+                            You cannot purchase your own book
+                          </div>
+                        )}
                     </div>
 
                     <div>
@@ -686,21 +442,156 @@ export default function Home() {
                         }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:text-white"
                         min="1"
+                        max={(() => {
+                          const book = books.find(
+                            (b) => b.id === bookIdPurchase
+                          );
+                          return book ? parseInt(book.stock) : 999;
+                        })()}
                       />
                     </div>
 
+                    {/* Total price calculator */}
+                    {bookIdPurchase > 0 && quantity > 0 && (
+                      <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-md">
+                        <div className="flex justify-between text-sm">
+                          <span className="text-gray-600 dark:text-gray-300">
+                            Unit Price:
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {(() => {
+                              const book = books.find(
+                                (b) => b.id === bookIdPurchase
+                              );
+                              return book ? `${book.price} ETH` : "-";
+                            })()}
+                          </span>
+                        </div>
+                        <div className="flex justify-between text-sm mt-1">
+                          <span className="text-gray-600 dark:text-gray-300">
+                            Quantity:
+                          </span>
+                          <span className="font-medium text-gray-900 dark:text-white">
+                            {quantity}
+                          </span>
+                        </div>
+                        <div className="border-t border-indigo-100 dark:border-indigo-800 my-2"></div>
+                        <div className="flex justify-between font-medium">
+                          <span className="text-gray-800 dark:text-gray-200">
+                            Total:
+                          </span>
+                          <span className="text-indigo-600 dark:text-indigo-400">
+                            {(() => {
+                              const book = books.find(
+                                (b) => b.id === bookIdPurchase
+                              );
+                              return book
+                                ? `${(
+                                    parseFloat(book.price) * quantity
+                                  ).toFixed(4)} ETH`
+                                : "-";
+                            })()}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
                     <button
-                      onClick={handlePurchase}
-                      disabled={isPurchasing}
-                      className="w-full flex justify-center items-center bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors duration-200"
+                      onClick={() => {
+                        // Update the handlePurchase function to check authorWallet instead of author
+                        const bookToPurchase = books.find(
+                          (book) => book.id === bookIdPurchase
+                        );
+
+                        if (
+                          bookToPurchase &&
+                          bookToPurchase.owner &&
+                          bookToPurchase.owner.toLowerCase() ===
+                            walletAddress.toLowerCase()
+                        ) {
+                          showNotification(
+                            "error",
+                            "You cannot purchase your own book"
+                          );
+                          return;
+                        }
+
+                        if (bookIdPurchase > 0 && quantity > 0) {
+                          if (!bookToPurchase) {
+                            showNotification("error", "Book not found");
+                            return;
+                          }
+
+                          if (parseInt(bookToPurchase.stock) < quantity) {
+                            showNotification(
+                              "error",
+                              "Not enough books in stock"
+                            );
+                            return;
+                          }
+
+                          handlePurchase();
+                        } else {
+                          showNotification(
+                            "error",
+                            "Enter valid book ID and quantity"
+                          );
+                        }
+                      }}
+                      disabled={
+                        isPurchasing ||
+                        books.some(
+                          (book) =>
+                            book.id === bookIdPurchase &&
+                            book.owner &&
+                            book.owner.toLowerCase() ===
+                              walletAddress.toLowerCase()
+                        ) ||
+                        !books.some((book) => book.id === bookIdPurchase) ||
+                        quantity <= 0 ||
+                        (() => {
+                          const book = books.find(
+                            (b) => b.id === bookIdPurchase
+                          );
+                          return book ? parseInt(book.stock) < quantity : true;
+                        })()
+                      }
+                      className="w-full flex justify-center items-center bg-blue-600 hover:bg-blue-700 dark:bg-blue-700 dark:hover:bg-blue-600 text-white py-2 px-4 rounded-md transition-colors duration-200 shadow-md disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {isPurchasing ? (
                         <>
                           <IconComponent
                             name="Loader2"
-                            className="h-4 w-4 mr-2"
+                            className="h-4 w-4 mr-2 animate-spin"
                           />
                           Processing...
+                        </>
+                      ) : books.some(
+                          (book) =>
+                            book.id === bookIdPurchase &&
+                            book.owner &&
+                            book.owner.toLowerCase() ===
+                              walletAddress.toLowerCase()
+                        ) ? (
+                        <>
+                          Cannot Buy Own Book
+                        </>
+                      ) : !books.some((book) => book.id === bookIdPurchase) ? (
+                        <>
+                          Select a Book
+                        </>
+                      ) : (() => {
+                          const book = books.find(
+                            (b) => b.id === bookIdPurchase
+                          );
+                          return book && parseInt(book.stock) < quantity;
+                        })() ? (
+                        <>
+                          <IconComponent
+                            name="AlertTriangle"
+                            className="h-4 w-4 mr-2"
+                          />
+                          Insufficient Stock
                         </>
                       ) : (
                         <>
@@ -712,13 +603,18 @@ export default function Home() {
                         </>
                       )}
                     </button>
+
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                      Payments are sent directly to the author's wallet via the
+                      Ethereum blockchain
+                    </div>
                   </div>
                 </div>
               </div>
 
               {/* Add Book Card */}
-              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-transform duration-300 hover:shadow-xl hover:scale-[1.01]">
-                <div className="bg-green-600 p-4">
+              <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700">
+                <div className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 p-4">
                   <h2 className="text-white text-xl font-semibold flex items-center">
                     <IconComponent name="Plus" className="h-5 w-5 mr-2" />
                     Add New Book
@@ -765,6 +661,30 @@ export default function Home() {
                           })
                         }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                      />
+                    </div>
+
+                    {/* Add the Author Wallet field here */}
+                    <div>
+                      <label
+                        htmlFor="authorWallet"
+                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                      >
+                        Author's Wallet Address
+                      </label>
+                      <input
+                        type="text"
+                        id="authorWallet"
+                        value={bookDataAdd.authorWallet}
+                        onChange={(e) =>
+                          setBookDataAdd({
+                            ...bookDataAdd,
+                            authorWallet: e.target.value,
+                          })
+                        }
+                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="0x..."
+                        disabled={true}
                       />
                     </div>
 
@@ -815,16 +735,29 @@ export default function Home() {
 
                     <button
                       onClick={handleAddBook}
-                      disabled={isAddingBook}
-                      className="w-full flex justify-center items-center bg-green-600 hover:bg-green-700 text-white py-2 px-4 rounded-md transition-colors duration-200"
+                      disabled={
+                        isAddingBook ||
+                        !bookDataAdd.authorWallet ||
+                        !ethers.utils.isAddress(bookDataAdd.authorWallet)
+                      }
+                      className="w-full flex justify-center items-center bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-2 px-4 rounded-md transition-colors duration-200 shadow-md disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {isAddingBook ? (
                         <>
                           <IconComponent
                             name="Loader2"
-                            className="h-4 w-4 mr-2"
+                            className="h-4 w-4 mr-2 animate-spin"
                           />
                           Adding...
+                        </>
+                      ) : !bookDataAdd.authorWallet ||
+                        !ethers.utils.isAddress(bookDataAdd.authorWallet) ? (
+                        <>
+                          <IconComponent
+                            name="AlertTriangle"
+                            className="h-4 w-4 mr-2"
+                          />
+                          Enter Valid Author Wallet
                         </>
                       ) : (
                         <>
@@ -833,14 +766,19 @@ export default function Home() {
                         </>
                       )}
                     </button>
+
+                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
+                      Books can be purchased with ETH, and payments will go
+                      directly to the author's wallet
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Book Listing Section */}
-            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden mt-12">
-              <div className="bg-indigo-600 p-4 flex justify-between items-center">
+            <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden border border-gray-100 dark:border-gray-700 mb-12">
+              <div className="bg-gradient-to-r from-indigo-600 to-indigo-700 dark:from-indigo-700 dark:to-indigo-800 p-4 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                 <h2 className="text-white text-xl font-semibold flex items-center">
                   <IconComponent name="List" className="h-5 w-5 mr-2" />
                   Available Books
@@ -848,7 +786,7 @@ export default function Home() {
                 <div className="flex items-center">
                   <button
                     onClick={refreshBooks}
-                    className="flex items-center space-x-1 bg-indigo-500 hover:bg-indigo-400 text-white px-3 py-1 rounded-md text-sm"
+                    className="flex items-center space-x-1 bg-indigo-500 hover:bg-indigo-400 dark:bg-indigo-600 dark:hover:bg-indigo-500 text-white px-3 py-1 rounded-md text-sm shadow-sm"
                     disabled={isLoadingBooks}
                   >
                     <IconComponent
@@ -869,8 +807,8 @@ export default function Home() {
 
               <div className="p-4">
                 {/* Search and Filter */}
-                <div className="mb-4 flex items-center">
-                  <div className="relative flex-1">
+                <div className="mb-4">
+                  <div className="relative w-full max-w-md">
                     <IconComponent
                       name="Search"
                       className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400"
@@ -890,84 +828,279 @@ export default function Home() {
                   <div className="flex justify-center items-center py-12">
                     <IconComponent
                       name="Loader2"
-                      className="h-8 w-8 text-indigo-500"
+                      className="h-8 w-8 text-indigo-500 animate-spin"
                     />
                     <span className="ml-2 text-gray-600 dark:text-gray-300">
                       Loading books...
                     </span>
                   </div>
                 ) : sortedBooks.length > 0 ? (
-                  <div className="overflow-x-auto">
+                  <div className="overflow-x-auto rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
                     <table className="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
-                      <thead className="bg-gray-50 dark:bg-gray-800">
+                      <thead className="bg-gray-50 dark:bg-gray-800/80 sticky top-0 z-10 backdrop-blur-sm">
                         <tr>
                           <th
                             scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
                             onClick={() => handleSort("id")}
+                            aria-sort={
+                              sortBy === "id"
+                                ? sortOrder === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
                           >
                             <div className="flex items-center">
                               ID
-                              {sortBy === "id" && (
-                                <span className="ml-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
+                              {sortBy === "id" ? (
+                                <svg
+                                  className="ml-1 h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  {sortOrder === "asc" ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  )}
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4"
+                                  />
+                                </svg>
                               )}
                             </div>
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
                             onClick={() => handleSort("title")}
+                            aria-sort={
+                              sortBy === "title"
+                                ? sortOrder === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
                           >
                             <div className="flex items-center">
                               Title
-                              {sortBy === "title" && (
-                                <span className="ml-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
+                              {sortBy === "title" ? (
+                                <svg
+                                  className="ml-1 h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  {sortOrder === "asc" ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  )}
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4"
+                                  />
+                                </svg>
                               )}
                             </div>
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
                             onClick={() => handleSort("author")}
+                            aria-sort={
+                              sortBy === "author"
+                                ? sortOrder === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
                           >
                             <div className="flex items-center">
                               Author
-                              {sortBy === "author" && (
-                                <span className="ml-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
+                              {sortBy === "author" ? (
+                                <svg
+                                  className="ml-1 h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  {sortOrder === "asc" ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  )}
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4"
+                                  />
+                                </svg>
                               )}
                             </div>
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
                             onClick={() => handleSort("price")}
+                            aria-sort={
+                              sortBy === "price"
+                                ? sortOrder === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
                           >
                             <div className="flex items-center">
                               Price (ETH)
-                              {sortBy === "price" && (
-                                <span className="ml-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
+                              {sortBy === "price" ? (
+                                <svg
+                                  className="ml-1 h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  {sortOrder === "asc" ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  )}
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4"
+                                  />
+                                </svg>
                               )}
                             </div>
                           </th>
                           <th
                             scope="col"
-                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700"
+                            className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider cursor-pointer hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-150 group"
                             onClick={() => handleSort("stock")}
+                            aria-sort={
+                              sortBy === "stock"
+                                ? sortOrder === "asc"
+                                  ? "ascending"
+                                  : "descending"
+                                : "none"
+                            }
                           >
                             <div className="flex items-center">
                               Stock
-                              {sortBy === "stock" && (
-                                <span className="ml-1">
-                                  {sortOrder === "asc" ? "↑" : "↓"}
-                                </span>
+                              {sortBy === "stock" ? (
+                                <svg
+                                  className="ml-1 h-4 w-4"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  {sortOrder === "asc" ? (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M5 15l7-7 7 7"
+                                    />
+                                  ) : (
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M19 9l-7 7-7-7"
+                                    />
+                                  )}
+                                </svg>
+                              ) : (
+                                <svg
+                                  className="ml-1 h-4 w-4 opacity-0 group-hover:opacity-50"
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="2"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 16V4m0 0L3 8m4-4l4 4"
+                                  />
+                                </svg>
                               )}
                             </div>
                           </th>
@@ -983,48 +1116,108 @@ export default function Home() {
                         {sortedBooks.map((book) => (
                           <tr
                             key={book.id}
-                            className="hover:bg-gray-50 dark:hover:bg-gray-700"
+                            className={`hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors duration-150 ${
+                              book.owner &&
+                              book.owner.toLowerCase() ===
+                                walletAddress.toLowerCase()
+                                ? "bg-indigo-50/30 dark:bg-indigo-900/10"
+                                : ""
+                            }`}
                           >
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
-                              {book.id}
+                              <span className="bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-300 px-2 py-1 rounded-md">
+                                #{book.id}
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               {book.title}
+                              {book.owner &&
+                                book.owner.toLowerCase() ===
+                                  walletAddress.toLowerCase() && (
+                                  <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300">
+                                    <svg
+                                      className="-ml-0.5 mr-1.5 h-2 w-2 text-purple-600 dark:text-purple-400"
+                                      fill="currentColor"
+                                      viewBox="0 0 8 8"
+                                    >
+                                      <circle cx="4" cy="4" r="3" />
+                                    </svg>
+                                    Your Book
+                                  </span>
+                                )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                               {book.author}
                             </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-blue-600 dark:text-blue-400 font-medium">
-                              {book.price}
-                            </td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                              {book.stock}
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              <span className="text-blue-600 dark:text-blue-400 font-medium bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded-md">
+                                {book.price} ETH
+                              </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm">
-                              <button
-                                onClick={() => {
-                                  setBookIdPurchase(book.id);
-                                  setQuantity(1);
-                                  document
-                                    .getElementById("purchase-section")
-                                    ?.scrollIntoView({ behavior: "smooth" });
-                                }}
-                                className="text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3"
+                              <span
+                                className={`px-2 py-1 rounded-md ${
+                                  parseInt(book.stock) > 5
+                                    ? "bg-green-50 dark:bg-green-900/20 text-green-800 dark:text-green-400"
+                                    : parseInt(book.stock) > 0
+                                    ? "bg-yellow-50 dark:bg-yellow-900/20 text-yellow-800 dark:text-yellow-400"
+                                    : "bg-red-50 dark:bg-red-900/20 text-red-800 dark:text-red-400"
+                                }`}
                               >
-                                Buy
-                              </button>
-                              <button
-                                onClick={() => {
-                                  setBookIdGet(book.id);
-                                  handleGetBook();
-                                  document
-                                    .getElementById("details-section")
-                                    ?.scrollIntoView({ behavior: "smooth" });
-                                }}
-                                className="text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-300"
-                              >
-                                Details
-                              </button>
+                                {book.stock}
+                              </span>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm">
+                              {book.owner &&
+                              book.owner.toLowerCase() ===
+                                walletAddress.toLowerCase() ? (
+                                <span
+                                  className="inline-flex items-center text-gray-400 dark:text-gray-500 cursor-not-allowed"
+                                  title="You cannot purchase your own book"
+                                >
+                                  <svg
+                                    className="h-4 w-4 mr-1"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                                    />
+                                  </svg>
+                                  Owner
+                                </span>
+                              ) : (
+                                <button
+                                  onClick={() => {
+                                    setBookIdPurchase(book.id);
+                                    setQuantity(1);
+                                    document
+                                      .getElementById("purchase-section")
+                                      ?.scrollIntoView({ behavior: "smooth" });
+                                  }}
+                                  className="inline-flex items-center text-indigo-600 hover:text-indigo-900 dark:text-indigo-400 dark:hover:text-indigo-300 mr-3 transition-colors duration-150"
+                                  aria-label={`Buy ${book.title}`}
+                                >
+                                  <svg
+                                    className="h-4 w-4 mr-1"
+                                    viewBox="0 0 24 24"
+                                    fill="none"
+                                    stroke="currentColor"
+                                    strokeWidth="2"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
+                                    />
+                                  </svg>
+                                  Buy
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -1033,6 +1226,10 @@ export default function Home() {
                   </div>
                 ) : (
                   <div className="text-center py-12">
+                    <IconComponent
+                      name="Search"
+                      className="h-12 w-12 mx-auto text-gray-300 dark:text-gray-600 mb-4"
+                    />
                     <p className="text-gray-500 dark:text-gray-400">
                       {searchTerm
                         ? "No books match your search criteria."
@@ -1054,7 +1251,7 @@ export default function Home() {
         )}
       </div>
 
-      <footer className="bg-white dark:bg-gray-800 mt-12 py-6 border-t border-gray-200 dark:border-gray-700">
+      <footer className="bg-white dark:bg-gray-800 py-6 border-t border-gray-200 dark:border-gray-700">
         <div className="max-w-7xl mx-auto px-4 text-center text-gray-500 dark:text-gray-400 text-sm">
           Blockchain BookStore &copy; {new Date().getFullYear()} | Built with
           Next.js and Ethereum
