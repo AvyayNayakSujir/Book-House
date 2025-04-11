@@ -32,7 +32,7 @@ This repository contains the implementation of a blockchain-based application de
 git clone https://github.com/yourusername/Book-House.git
 
 # Navigate to the project directory
-cd p-5
+cd Book-House
 
 # Install dependencies
 npm install
