@@ -43,7 +43,7 @@ contract BookStore {
         uint256 _price,
         uint256 _stock,
         address payable _authorWallet
-    ) external onlyOwner {
+    ) external {
         bookIdCounter++;
         books[bookIdCounter] = Book(
             bookIdCounter,

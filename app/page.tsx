@@ -73,6 +73,8 @@ export default function Home() {
   const { purchaseBook, isPurchasing } = usePurchase(contract);
   const { addBook, isLoading: isAddingBook } = useAddBook(contract);
   const { isLoading: isBookLoading, getBook } = useGetBook(contract);
+  const [isContractOwner, setIsContractOwner] = useState(false);
+
   const {
     books,
     isLoading: isLoadingBooks,
@@ -107,6 +109,14 @@ export default function Home() {
         contractABI,
         signer
       );
+
+      try {
+        const owner = await contract.owner();
+        setIsContractOwner(owner.toLowerCase() === address.toLowerCase());
+      } catch (error) {
+        console.error("Error checking contract owner:", error);
+      }
+
       setContract(contract);
       setIsConnecting(false);
       showNotification("success", "Connected to BookStore contract!");
@@ -573,13 +583,9 @@ export default function Home() {
                             book.owner.toLowerCase() ===
                               walletAddress.toLowerCase()
                         ) ? (
-                        <>
-                          Cannot Buy Own Book
-                        </>
+                        <>Cannot Buy Own Book</>
                       ) : !books.some((book) => book.id === bookIdPurchase) ? (
-                        <>
-                          Select a Book
-                        </>
+                        <>Select a Book</>
                       ) : (() => {
                           const book = books.find(
                             (b) => b.id === bookIdPurchase
@@ -587,10 +593,6 @@ export default function Home() {
                           return book && parseInt(book.stock) < quantity;
                         })() ? (
                         <>
-                          <IconComponent
-                            name="AlertTriangle"
-                            className="h-4 w-4 mr-2"
-                          />
                           Insufficient Stock
                         </>
                       ) : (
@@ -611,7 +613,6 @@ export default function Home() {
                   </div>
                 </div>
               </div>
-
               {/* Add Book Card */}
               <div className="bg-white dark:bg-gray-800 rounded-xl shadow-lg overflow-hidden transition-all duration-300 hover:shadow-xl border border-gray-100 dark:border-gray-700">
                 <div className="bg-gradient-to-r from-green-600 to-green-700 dark:from-green-700 dark:to-green-800 p-4">
@@ -640,6 +641,7 @@ export default function Home() {
                           })
                         }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Enter book title"
                       />
                     </div>
 
@@ -661,31 +663,46 @@ export default function Home() {
                           })
                         }
                         className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                        placeholder="Enter author name"
                       />
                     </div>
 
-                    {/* Add the Author Wallet field here */}
+                    {/* Author Wallet field */}
                     <div>
                       <label
                         htmlFor="authorWallet"
-                        className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
+                        className="flex items-center space-x-1 text-sm font-medium text-gray-700 dark:text-gray-300 mb-1"
                       >
-                        Author's Wallet Address
+                        <span>Author's Wallet Address</span>
+                        <span className="bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-300 text-xs px-2 py-0.5 rounded">
+                          Auto-filled
+                        </span>
                       </label>
-                      <input
-                        type="text"
-                        id="authorWallet"
-                        value={bookDataAdd.authorWallet}
-                        onChange={(e) =>
-                          setBookDataAdd({
-                            ...bookDataAdd,
-                            authorWallet: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        placeholder="0x..."
-                        disabled={true}
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          id="authorWallet"
+                          value={bookDataAdd.authorWallet}
+                          onChange={(e) =>
+                            setBookDataAdd({
+                              ...bookDataAdd,
+                              authorWallet: e.target.value,
+                            })
+                          }
+                          className="w-full pl-9 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white bg-gray-50 dark:bg-gray-700/60"
+                          placeholder="0x..."
+                          disabled={true}
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <IconComponent
+                            name="Wallet"
+                            className="h-4 w-4 text-gray-400 dark:text-gray-500"
+                          />
+                        </div>
+                      </div>
+                      <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+                        Payments for book purchases will be sent to this address
+                      </p>
                     </div>
 
                     <div>
@@ -695,20 +712,28 @@ export default function Home() {
                       >
                         Price (ETH)
                       </label>
-                      <input
-                        type="number"
-                        id="price"
-                        value={bookDataAdd.price}
-                        step="0.0001"
-                        onChange={(e) =>
-                          setBookDataAdd({
-                            ...bookDataAdd,
-                            price: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        min="0"
-                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="price"
+                          value={bookDataAdd.price}
+                          step="0.0001"
+                          onChange={(e) =>
+                            setBookDataAdd({
+                              ...bookDataAdd,
+                              price: e.target.value,
+                            })
+                          }
+                          className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          min="0"
+                          placeholder="0.01"
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-gray-500 dark:text-gray-400">
+                            Ξ
+                          </span>
+                        </div>
+                      </div>
                     </div>
 
                     <div>
@@ -718,59 +743,51 @@ export default function Home() {
                       >
                         Stock
                       </label>
-                      <input
-                        type="number"
-                        id="stock"
-                        value={bookDataAdd.stock}
-                        onChange={(e) =>
-                          setBookDataAdd({
-                            ...bookDataAdd,
-                            stock: e.target.value,
-                          })
-                        }
-                        className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
-                        min="1"
-                      />
+                      <div className="relative">
+                        <input
+                          type="number"
+                          id="stock"
+                          value={bookDataAdd.stock}
+                          onChange={(e) =>
+                            setBookDataAdd({
+                              ...bookDataAdd,
+                              stock: e.target.value,
+                            })
+                          }
+                          className="w-full pl-8 pr-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 dark:bg-gray-700 dark:text-white"
+                          min="1"
+                          placeholder="10"
+                        />
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <IconComponent
+                            name="BookOpen"
+                            className="h-4 w-4 text-gray-400 dark:text-gray-500"
+                          />
+                        </div>
+                      </div>
                     </div>
 
                     <button
                       onClick={handleAddBook}
-                      disabled={
-                        isAddingBook ||
-                        !bookDataAdd.authorWallet ||
-                        !ethers.utils.isAddress(bookDataAdd.authorWallet)
-                      }
-                      className="w-full flex justify-center items-center bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-2 px-4 rounded-md transition-colors duration-200 shadow-md disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
+                      className="w-full flex justify-center items-center bg-green-600 hover:bg-green-700 dark:bg-green-700 dark:hover:bg-green-600 text-white py-3 px-4 rounded-md transition-colors duration-200 shadow-md disabled:bg-gray-400 dark:disabled:bg-gray-600 disabled:cursor-not-allowed"
                     >
                       {isAddingBook ? (
                         <>
                           <IconComponent
                             name="Loader2"
-                            className="h-4 w-4 mr-2 animate-spin"
+                            className="h-5 w-5 mr-2 animate-spin"
                           />
-                          Adding...
-                        </>
-                      ) : !bookDataAdd.authorWallet ||
-                        !ethers.utils.isAddress(bookDataAdd.authorWallet) ? (
-                        <>
-                          <IconComponent
-                            name="AlertTriangle"
-                            className="h-4 w-4 mr-2"
-                          />
-                          Enter Valid Author Wallet
+                          <span className="font-medium">Adding Book...</span>
                         </>
                       ) : (
                         <>
-                          <IconComponent name="Plus" className="h-4 w-4 mr-2" />
-                          Add Book
+                          <IconComponent name="Plus" className="h-5 w-5 mr-2" />
+                          <span className="font-medium">
+                            Add Book to Marketplace
+                          </span>
                         </>
                       )}
                     </button>
-
-                    <div className="text-xs text-gray-500 dark:text-gray-400 text-center mt-2">
-                      Books can be purchased with ETH, and payments will go
-                      directly to the author's wallet
-                    </div>
                   </div>
                 </div>
               </div>
