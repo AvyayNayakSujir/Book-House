@@ -121,6 +121,13 @@ export function useAllBooks(contract: any) {
 
 //--------------------------------------------------------------------------------------------
 
+// Add ethereum to Window interface
+declare global {
+  interface Window {
+    ethereum: any;
+  }
+}
+
 export function usePurchase(contract: any) {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
