@@ -28,7 +28,6 @@ export default function PurchasedBooks() {
     bookIds: [] as number[],
     titles: [] as string[],
     authors: [] as string[],
-    quantities: [] as number[],
     timestamps: [] as number[],
   });
 
@@ -70,7 +69,6 @@ export default function PurchasedBooks() {
         bookIds: result[0].map((id: any) => Number(id)),
         titles: result[1],
         authors: result[2],
-        quantities: result[3].map((qty: any) => Number(qty)),
         timestamps: result[4].map((ts: any) => Number(ts)),
       });
       setIsLoading(false);
