@@ -28,7 +28,7 @@ SEPOLIA_RPC_URL = "{YOUR SEPOLIA RPC URL}"
 ```
 ### 5. Compile and deploy the smart contracts
 ```bash
-npx hardhat run scripts/deploy.ts --network Sepolia
+npx hardhat run scripts/deploy.ts --network sepolia
 ```
 ### 6. Run the application
 ```bash
