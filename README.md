@@ -28,7 +28,7 @@ SEPOLIA_RPC_URL = ""
 ```bash
 npx hardhat run scripts/deploy.ts
 ```
-##6 6. Run the application
+### 6. Run the application
 ```bash
 npm run dev
 ```
