@@ -124,12 +124,37 @@ export function useAllBooks(contract: any) {
 export function usePurchase(contract: any) {
   const [isPurchasing, setIsPurchasing] = useState(false);
 
-  async function purchaseBook(bookId: any, quantity: any) {
+  async function purchaseBook(bookId: any) {
     try {
       setIsPurchasing(true);
       //@ts-ignore
       await window.ethereum.enable();
 
+      // Get user's address
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      const signer = provider.getSigner();
+      const userAddress = await signer.getAddress();
+      
+      // Check if user already owns this book
+      try {
+        // Check purchased books from user history
+        const userBooks = await contract.getUserBooks();
+        const userBookIds = userBooks[0].map((id: any) => Number(id));
+        
+        if (userBookIds.includes(Number(bookId))) {
+          setIsPurchasing(false);
+          return { 
+            success: false, 
+            message: "You already own this book." 
+          };
+        }
+      } catch (error) {
+        console.error("Error checking book ownership:", error);
+      }
+
+      // Always purchase with quantity 1
+      const quantity = 1;
+      
       const book = await contract.getBook(bookId);
       const pricePerBook = book[3]; // price in wei
       const totalPrice = pricePerBook.mul(quantity);

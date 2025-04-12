@@ -124,6 +124,12 @@ export default function PurchasedBooks() {
     }
   }, []);
 
+  useEffect(() => {
+    if (contract) {
+      getUserPurchaseHistory();
+    }
+  }, [contract]); // This will run whenever the contract object changes
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 dark:from-gray-900 dark:to-slate-900 transition-colors duration-300 py-8">
       <div className="max-w-6xl mx-auto px-4">

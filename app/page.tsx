@@ -132,24 +132,26 @@ export default function Home() {
 
   // Book handlers
   const handlePurchase = async () => {
-    if (bookIdPurchase > 0 && quantity > 0) {
+    if (bookIdPurchase > 0) {
       const bookToPurchase = books.find((book) => book.id === bookIdPurchase);
-      console.log(bookToPurchase);
+      
       // Check if the user is trying to buy their own book
       if (
         bookToPurchase &&
-        bookToPurchase.author.toLowerCase() === walletAddress.toLowerCase()
+        bookToPurchase.owner &&
+        bookToPurchase.owner.toLowerCase() === walletAddress.toLowerCase()
       ) {
         showNotification("error", "You cannot purchase your own book");
         return;
       }
-      const result = await purchaseBook(bookIdPurchase, quantity);
+      
+      const result = await purchaseBook(bookIdPurchase);
       showNotification(result.success ? "success" : "error", result.message);
       if (result.success) {
         refreshBooks(); // Refresh book list after purchase
       }
     } else {
-      showNotification("error", "Enter valid book ID and quantity.");
+      showNotification("error", "Please select a book to purchase.");
     }
   };
 
@@ -436,6 +438,8 @@ export default function Home() {
                         )}
                     </div>
 
+                    {/* Remove or comment out this entire section */}
+                    {/*
                     <div>
                       <label
                         htmlFor="quantity"
@@ -460,13 +464,14 @@ export default function Home() {
                         })()}
                       />
                     </div>
+                    */}
 
                     {/* Total price calculator */}
-                    {bookIdPurchase > 0 && quantity > 0 && (
+                    {bookIdPurchase > 0 && (
                       <div className="p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-md">
                         <div className="flex justify-between text-sm">
                           <span className="text-gray-600 dark:text-gray-300">
-                            Unit Price:
+                            Price:
                           </span>
                           <span className="font-medium text-gray-900 dark:text-white">
                             {(() => {
@@ -477,75 +482,41 @@ export default function Home() {
                             })()}
                           </span>
                         </div>
-                        <div className="flex justify-between text-sm mt-1">
-                          <span className="text-gray-600 dark:text-gray-300">
-                            Quantity:
-                          </span>
-                          <span className="font-medium text-gray-900 dark:text-white">
-                            {quantity}
-                          </span>
-                        </div>
-                        <div className="border-t border-indigo-100 dark:border-indigo-800 my-2"></div>
-                        <div className="flex justify-between font-medium">
-                          <span className="text-gray-800 dark:text-gray-200">
-                            Total:
-                          </span>
-                          <span className="text-indigo-600 dark:text-indigo-400">
-                            {(() => {
-                              const book = books.find(
-                                (b) => b.id === bookIdPurchase
-                              );
-                              return book
-                                ? `${(
-                                    parseFloat(book.price) * quantity
-                                  ).toFixed(4)} ETH`
-                                : "-";
-                            })()}
-                          </span>
+                        <div className="text-xs text-gray-500 dark:text-gray-400 mt-2 text-center">
+                          Each user can purchase only one copy of a book
                         </div>
                       </div>
                     )}
 
                     <button
                       onClick={() => {
-                        // Update the handlePurchase function to check authorWallet instead of author
                         const bookToPurchase = books.find(
                           (book) => book.id === bookIdPurchase
                         );
-
+                      
                         if (
                           bookToPurchase &&
                           bookToPurchase.owner &&
-                          bookToPurchase.owner.toLowerCase() ===
-                            walletAddress.toLowerCase()
+                          bookToPurchase.owner.toLowerCase() === walletAddress.toLowerCase()
                         ) {
-                          showNotification(
-                            "error",
-                            "You cannot purchase your own book"
-                          );
+                          showNotification("error", "You cannot purchase your own book");
                           return;
                         }
-
-                        if (bookIdPurchase > 0 && quantity > 0) {
+                      
+                        if (bookIdPurchase > 0) {
                           if (!bookToPurchase) {
                             showNotification("error", "Book not found");
                             return;
                           }
-
-                          if (parseInt(bookToPurchase.stock) < quantity) {
-                            showNotification(
-                              "error",
-                              "Not enough books in stock"
-                            );
+                      
+                          if (parseInt(bookToPurchase.stock) < 1) {
+                            showNotification("error", "Book is out of stock");
                             return;
                           }
-
+                      
                           handlePurchase();
                         } else {
-                          showNotification(
-                            "error",
-                            "Enter valid book ID and quantity"
-                          );
+                          showNotification("error", "Please select a book to purchase");
                         }
                       }}
                       disabled={
@@ -1116,8 +1087,7 @@ export default function Home() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     d="M7 16V4m0 0L3 8m4-4l4 4"
-                                  />
-                                </svg>
+                                /></svg>
                               )}
                             </div>
                           </th>
@@ -1211,7 +1181,7 @@ export default function Home() {
                                 <button
                                   onClick={() => {
                                     setBookIdPurchase(book.id);
-                                    setQuantity(1);
+                                    // No need to set quantity as it stays 1
                                     document
                                       .getElementById("purchase-section")
                                       ?.scrollIntoView({ behavior: "smooth" });
