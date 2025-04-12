@@ -177,9 +177,12 @@ export default function Home() {
 
   // Filter and sort books
   const filteredBooks = books.filter(
-    (book) =>
-      book.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author.toLowerCase().includes(searchTerm.toLowerCase())
+    (book) => 
+      // First check if book is in stock
+      parseInt(book.stock) > 0 && 
+      // Then apply the search filter
+      (book.title.toLowerCase().includes(searchTerm.toLowerCase()) || 
+       book.author.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
   const sortedBooks = [...filteredBooks].sort((a, b) => {
@@ -854,8 +857,7 @@ export default function Home() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     d="M7 16V4m0 0L3 8m4-4l4 4"
-                                  />
-                                </svg>
+                                /></svg>
                               )}
                             </div>
                           </th>
