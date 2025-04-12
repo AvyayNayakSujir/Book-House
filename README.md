@@ -17,12 +17,14 @@ cd Book-House
 npm install
 ```
 ### 4. Configure environment variables
-The smart contract has already been deployed on an Ethereum Sepolia network. If you want to deploy on your own network, create a .env file in the root folder and add these variables.
-You can get the project ID and Sepolia RPC URL from www.infura.io. Your private key is to be taken from the account details, in Meta Mask wallet. 
+ - Create a .env file in the root folder.
+ - Get the project ID and Sepolia RPC URL from www.infura.io. 
+ - Get your private key from the account details, in your Meta Mask wallet.
+ - embed these values in the created .env file
 ```bash
-INFURA_PROJECT_ID = "" 
-PRIVATE_KEY = ""
-SEPOLIA_RPC_URL = ""
+INFURA_PROJECT_ID = "{YOUR INFURA PROJECT ID}" 
+PRIVATE_KEY = "{YOUR META MASK PRIVATE KEY}"
+SEPOLIA_RPC_URL = "{YOUR SEPOLIA RPC URL}"
 ```
 ### 5. Compile and deploy the smart contracts
 ```bash
