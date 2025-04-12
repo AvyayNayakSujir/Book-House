@@ -4,14 +4,19 @@ import { ethers } from "ethers";
 import contractConfig from "../../contract-config.json";
 import atm_abi from "../../artifacts/contracts/BookStore.sol/BookStore.json";
 import Link from "next/link";
+import { useWallet } from "@/contexts/WalletContext";
 
 export default function PurchasedBooks() {
+  const { 
+    contract, 
+    walletAddress, 
+    isConnecting, 
+    connectWallet 
+  } = useWallet();
+
   const contractAddress = contractConfig.contractAddress || "";
   const contractABI = atm_abi.abi;
 
-  const [contract, setContract] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState<string>("");
-  const [isConnecting, setIsConnecting] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [notification, setNotification] = useState<{
     type: string;
@@ -37,40 +42,16 @@ export default function PurchasedBooks() {
     }
   };
 
-  // Connect to blockchain
   const connectToContract = async () => {
-    try {
-      if (!contractAddress) {
-        throw new Error("Contract address is not defined");
-      }
-
-      setIsConnecting(true);
-      //@ts-ignore
-      await window.ethereum.enable();
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const address = await signer.getAddress();
-      setWalletAddress(address);
-
-      const contract = new ethers.Contract(
-        contractAddress,
-        contractABI,
-        signer
-      );
-      setContract(contract);
-      setIsConnecting(false);
-      showNotification("success", "Connected to BookStore contract!");
-
-      // Load purchases after connecting
+    const result = await connectWallet();
+    showNotification(
+      result.success ? "success" : "error", 
+      result.message
+    );
+    
+    // Load purchases after connecting
+    if (result.success) {
       getUserPurchaseHistory();
-    } catch (error) {
-      console.error("Error connecting to the contract:", error);
-      setIsConnecting(false);
-      showNotification(
-        "error",
-        "Failed to connect. Make sure MetaMask is installed and unlocked."
-      );
     }
   };
 
@@ -116,11 +97,6 @@ export default function PurchasedBooks() {
 
     if (prefersDark) {
       document.documentElement.classList.add("dark");
-    }
-
-    // Auto-connect when the page loads
-    if (typeof window !== "undefined" && window.ethereum) {
-      connectToContract();
     }
   }, []);
 

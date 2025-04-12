@@ -12,6 +12,7 @@ import {
   useGetBook,
 } from "@/public/components/hooks";
 import Book from "@/public/components/IBook";
+import { useWallet } from "@/contexts/WalletContext";
 
 declare global {
   interface Window {
@@ -27,11 +28,33 @@ const formatAddress = (address: string) => {
 };
 
 export default function Home() {
+  const { 
+    contract, 
+    walletAddress, 
+    isConnecting, 
+    isContractOwner, 
+    connectWallet 
+  } = useWallet();
+  
+  // Remove these states as they're now in the context:
+  // const [contract, setContract] = useState<any>(null);
+  // const [walletAddress, setWalletAddress] = useState<string>("");
+  // const [isContractOwner, setIsContractOwner] = useState(false);
+  // const [isConnecting, setIsConnecting] = useState(false);
+  
+  // Keep your other states
+  
+  // Replace connectToContract with this:
+  const connectToContract = async () => {
+    const result = await connectWallet();
+    showNotification(
+      result.success ? "success" : "error", 
+      result.message
+    );
+  };
+
   const contractAddress = contractConfig.contractAddress || "";
   const contractABI = atm_abi.abi;
-
-  const [contract, setContract] = useState<any>(null);
-  const [walletAddress, setWalletAddress] = useState<string>("");
 
   useEffect(() => {
     if (walletAddress) {
@@ -42,7 +65,6 @@ export default function Home() {
     }
   }, [walletAddress]);
 
-  const [isConnecting, setIsConnecting] = useState(false);
   const [notification, setNotification] = useState<{
     type: string;
     message: string;
@@ -73,7 +95,6 @@ export default function Home() {
   const { purchaseBook, isPurchasing } = usePurchase(contract);
   const { addBook, isLoading: isAddingBook } = useAddBook(contract);
   const { isLoading: isBookLoading, getBook } = useGetBook(contract);
-  const [isContractOwner, setIsContractOwner] = useState(false);
 
   const {
     books,
@@ -86,48 +107,6 @@ export default function Home() {
   const showNotification = (type: string, message: string) => {
     setNotification({ type, message });
     setTimeout(() => setNotification(null), 5000);
-  };
-
-  // Connect to blockchain
-  const connectToContract = async () => {
-    try {
-      if (!contractAddress) {
-        throw new Error("Contract address is not defined");
-      }
-
-      setIsConnecting(true);
-      //@ts-ignore
-      await window.ethereum.enable();
-
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
-      const signer = provider.getSigner();
-      const address = await signer.getAddress();
-      setWalletAddress(address);
-
-      const contract = new ethers.Contract(
-        contractAddress,
-        contractABI,
-        signer
-      );
-
-      try {
-        const owner = await contract.owner();
-        setIsContractOwner(owner.toLowerCase() === address.toLowerCase());
-      } catch (error) {
-        console.error("Error checking contract owner:", error);
-      }
-
-      setContract(contract);
-      setIsConnecting(false);
-      showNotification("success", "Connected to BookStore contract!");
-    } catch (error) {
-      console.error("Error connecting to the contract:", error);
-      setIsConnecting(false);
-      showNotification(
-        "error",
-        "Failed to connect. Make sure MetaMask is installed and unlocked."
-      );
-    }
   };
 
   // Book handlers
@@ -928,8 +907,7 @@ export default function Home() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     d="M7 16V4m0 0L3 8m4-4l4 4"
-                                  />
-                                </svg>
+                                /></svg>
                               )}
                             </div>
                           </th>
@@ -981,8 +959,7 @@ export default function Home() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     d="M7 16V4m0 0L3 8m4-4l4 4"
-                                  />
-                                </svg>
+                                /></svg>
                               )}
                             </div>
                           </th>
@@ -1034,8 +1011,7 @@ export default function Home() {
                                     strokeLinecap="round"
                                     strokeLinejoin="round"
                                     d="M7 16V4m0 0L3 8m4-4l4 4"
-                                  />
-                                </svg>
+                                /></svg>
                               )}
                             </div>
                           </th>
